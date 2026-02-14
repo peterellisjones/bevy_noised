@@ -2,6 +2,14 @@
 name = "bevy_noised"
 version = "0.1.0"
 edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "2D seeded noise primitives for Bevy with matching CPU and WGSL implementations"
+repository = "https://github.com/peterellisjones/bevy_noised"
+homepage = "https://github.com/peterellisjones/bevy_noised"
+documentation = "https://docs.rs/bevy_noised"
+readme = "README.md"
+keywords = ["bevy", "noise", "terrain", "procedural", "wgsl"]
+categories = ["game-development", "graphics", "algorithms"]
 
 [dependencies]
 bevy_math = "^0.18"
