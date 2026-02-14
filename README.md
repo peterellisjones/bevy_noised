@@ -115,9 +115,3 @@ Finite-difference derivative tolerances (`tests/finite_difference_derivative_tes
 ## Bevy compatibility
 
 - crate `0.1.x` -> Bevy `0.18`
-
-## Roadmap
-
-- 3D variants
-- domain warp helpers
-- tiling-friendly variants for wrapped worlds
