@@ -1,4 +1,55 @@
-//! Noise primitives with CPU implementations and WGSL source.
+//! Bevy-first 2D noise primitives for gameplay + rendering parity.
+//!
+//! `bevy_noised` exposes matching CPU and WGSL noise functions so gameplay systems,
+//! terrain generation, and shaders can sample the same fields with near-identical
+//! numeric output.
+//!
+//! The primary target workflow is shader-displaced terrain where CPU picking/raycast
+//! queries need to return the same heights as the rendered mesh.
+//!
+//! Derivatives are key in this workflow because they let you compute normals from
+//! the same noise field driving vertex displacement, which keeps terrain lighting
+//! stable and consistent.
+//!
+//! ## Why this crate in a Bevy project?
+//!
+//! - Deterministic seeded noise on CPU and GPU
+//! - Analytical derivatives for slope/normal/flow style workflows
+//! - Small API surface focused on common terrain and mask pipelines
+//!
+//! ## Picking a function
+//!
+//! - `simplex_noise_2d_seeded`: base coherent noise
+//! - `fbm_simplex_2d_seeded`: layered terrain-style noise
+//! - `ridged_fbm_2d_seeded`: mountain/ridge-heavy noise
+//! - `*_derivative` variants: return `(value, gradient)`
+//!
+//! ## Parameter guidance
+//!
+//! - `frequency`: world scale (`0.0005` to `0.01` are common terrain ranges)
+//! - `octaves`: layer count (`4` to `8` typical)
+//! - `lacunarity`: frequency multiplier per octave (usually around `2.0`)
+//! - `gain`: amplitude multiplier per octave (`0.4` to `0.6` common)
+//! - `seed`: deterministic variation source
+//!
+//! ## Example (CPU)
+//!
+//! ```
+//! use bevy_math::{Vec2, Vec3};
+//! use bevy_noised::fbm_simplex_2d_seeded_derivative;
+//!
+//! let world_pos = Vec2::new(128.0, 256.0);
+//! let (height, grad) = fbm_simplex_2d_seeded_derivative(world_pos, 0.001, 6, 2.0, 0.5, 42.0);
+//!
+//! let normal = Vec3::new(-grad.x, 1.0, -grad.y).normalize_or_zero();
+//! assert!(height.is_finite());
+//! assert!(normal.is_finite());
+//! ```
+//!
+//! ## WGSL source
+//!
+//! Use [`WGSL_NOISE_SOURCE`] to embed this crate's shader functions into your
+//! Bevy shader source. WGSL derivative variants return `vec3(value, dfdx, dfdy)`.
 //!
 //! Attribution: simplex implementation adapted from MIT-licensed work by
 //! Ian McEwan, Stefan Gustavson, Munrocket, and Johan Helsing.
@@ -10,6 +61,12 @@ pub const WGSL_NOISE_SOURCE: &str = include_str!(concat!(
     "/assets/shaders/noise.wgsl"
 ));
 
+/// Fractal Brownian motion (fBm) built from seeded 2D simplex noise.
+///
+/// Returns layered coherent noise suitable for terrain height, biome masks,
+/// and other smoothly-varying gameplay fields.
+///
+/// WGSL equivalent: `fbm_simplex_2d_seeded`.
 #[must_use]
 pub fn fbm_simplex_2d_seeded(
     pos: Vec2,
@@ -32,6 +89,15 @@ pub fn fbm_simplex_2d_seeded(
     sum
 }
 
+/// Fractal Brownian motion plus analytical gradient.
+///
+/// Returns `(value, gradient)`, where `gradient` is the derivative with respect
+/// to the input `pos` coordinates.
+///
+/// Typically used to derive normals for vertex-displaced terrain and to measure
+/// steepness for gameplay or material blending.
+///
+/// WGSL equivalent: `fbm_simplex_2d_seeded_with_derivative` (`vec3(value, dx, dy)`).
 #[must_use]
 pub fn fbm_simplex_2d_seeded_derivative(
     pos: Vec2,
@@ -57,6 +123,11 @@ pub fn fbm_simplex_2d_seeded_derivative(
     (sum, gradient)
 }
 
+/// Seeded 2D simplex noise value.
+///
+/// This is the base primitive used by the fBm and ridged fBm helpers.
+///
+/// WGSL equivalent: `simplex_noise_2d_seeded`.
 #[must_use]
 #[allow(clippy::many_single_char_names)]
 pub fn simplex_noise_2d_seeded(v: Vec2, seed: f32) -> f32 {
@@ -108,6 +179,14 @@ fn permute_3(x: Vec3) -> Vec3 {
     (((x * 34.0) + 1.0) * x) % Vec3::splat(289.0)
 }
 
+/// Seeded 2D simplex noise value plus analytical gradient.
+///
+/// Returns `(value, gradient)`, where `gradient` is the derivative with respect
+/// to the input `v` coordinates.
+///
+/// Useful when simplex directly drives displacement and you need matching normals.
+///
+/// WGSL equivalent: `simplex_noise_2d_seeded_with_derivative` (`vec3(value, dx, dy)`).
 #[must_use]
 #[allow(clippy::many_single_char_names, clippy::similar_names)]
 pub fn simplex_noise_2d_seeded_derivative(v: Vec2, seed: f32) -> (f32, Vec2) {
@@ -202,6 +281,11 @@ pub fn simplex_noise_2d_seeded_derivative(v: Vec2, seed: f32) -> (f32, Vec2) {
     (noise, grad)
 }
 
+/// Ridged fractal noise built from seeded 2D simplex noise.
+///
+/// Produces sharper mountain-like structures than standard fBm.
+///
+/// WGSL equivalent: `ridged_fbm_2d_seeded`.
 #[must_use]
 pub fn ridged_fbm_2d_seeded(
     pos: Vec2,
@@ -230,6 +314,15 @@ pub fn ridged_fbm_2d_seeded(
     sum
 }
 
+/// Ridged fractal noise plus analytical gradient.
+///
+/// Returns `(value, gradient)`, where `gradient` is the derivative with respect
+/// to the input `pos` coordinates.
+///
+/// Especially useful for ridge-heavy displaced terrain where normal quality has a
+/// strong visual impact on lighting.
+///
+/// WGSL equivalent: `ridged_fbm_2d_seeded_with_derivative` (`vec3(value, dx, dy)`).
 #[must_use]
 pub fn ridged_fbm_2d_seeded_derivative(
     pos: Vec2,
