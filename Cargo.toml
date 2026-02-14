@@ -21,4 +21,4 @@ bevy = { version = "^0.18", default-features = false, features = [
     "bevy_window",
     "bevy_winit",
 ] }
-bevy_gpu_test = "*"
+bevy_gpu_test = "^0.2"
