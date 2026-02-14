@@ -58,3 +58,23 @@ let n = fbm_simplex_2d_seeded_with_derivative(p, frequency, octaves, lacunarity,
 Notes:
 
 - "Parity" here means close numeric match under tolerances, not bit-perfect equality.
+
+## Test tolerances
+
+Current CPU/GPU parity tolerances (`tests/gpu_parity_noise_test.rs`):
+
+- simplex value: `1e-5` (0.001%)
+- simplex derivative: `2e-7` (0.00002%)
+- fbm/ridged value: `2e-5` (0.002%)
+- fbm/ridged derivative: `2e-5` (0.002%)
+
+Example parity error ranges from a recent run (`cargo test noise_parity -- --nocapture`):
+
+- value diffs: about `1.95e-6` to `5.84e-6`
+- gradient diffs: about `3.77e-8` to `1.16e-5`
+
+Finite-difference derivative tolerances (`tests/finite_difference_derivative_test.rs`):
+
+- simplex derivative vs numerical gradient: `4e-3`
+- fbm derivative vs numerical gradient: `2e-4`
+- ridged fbm derivative vs numerical gradient: `1e-3`

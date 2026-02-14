@@ -5,16 +5,15 @@ use bevy::render::render_resource::ShaderType;
 use bevy_gpu_test::ComputeTest;
 use bevy_noised::{
     fbm_simplex_2d_seeded, fbm_simplex_2d_seeded_derivative, ridged_fbm_2d_seeded,
-    ridged_fbm_2d_seeded_derivative, ridged_fbm_2d_seeded_derivative_exact,
-    simplex_noise_2d_seeded, simplex_noise_2d_seeded_derivative,
+    ridged_fbm_2d_seeded_derivative, simplex_noise_2d_seeded, simplex_noise_2d_seeded_derivative,
 };
 
 const TEST_POSITIONS: usize = 256;
 
-const SIMPLEX_VALUE_TOLERANCE: f32 = 1e-4;
-const FBM_VALUE_TOLERANCE: f32 = 5e-4;
-const SIMPLEX_GRADIENT_TOLERANCE: f32 = 1e-6;
-const FBM_GRADIENT_TOLERANCE: f32 = 1e-4;
+const SIMPLEX_VALUE_TOLERANCE: f32 = 1e-5;
+const FBM_VALUE_TOLERANCE: f32 = 2e-5;
+const SIMPLEX_GRADIENT_TOLERANCE: f32 = 2e-7;
+const FBM_GRADIENT_TOLERANCE: f32 = 2e-5;
 
 const MODE_SIMPLEX: u32 = 0;
 const MODE_SIMPLEX_DERIVATIVE: u32 = 1;
@@ -22,7 +21,6 @@ const MODE_FBM: u32 = 2;
 const MODE_FBM_DERIVATIVE: u32 = 3;
 const MODE_RIDGED_FBM: u32 = 4;
 const MODE_RIDGED_FBM_DERIVATIVE: u32 = 5;
-const MODE_RIDGED_FBM_DERIVATIVE_EXACT: u32 = 6;
 
 const ALL_MODES: &[(u32, &str)] = &[
     (MODE_SIMPLEX, "simplex_noise"),
@@ -31,10 +29,6 @@ const ALL_MODES: &[(u32, &str)] = &[
     (MODE_FBM_DERIVATIVE, "fbm_derivative"),
     (MODE_RIDGED_FBM, "ridged_fbm_noise"),
     (MODE_RIDGED_FBM_DERIVATIVE, "ridged_fbm_derivative"),
-    (
-        MODE_RIDGED_FBM_DERIVATIVE_EXACT,
-        "ridged_fbm_derivative_exact",
-    ),
 ];
 
 #[derive(Clone, Copy, Debug, ShaderType)]
@@ -182,22 +176,6 @@ fn compute_cpu_results(mode: u32, inputs: &[NoiseTestInput]) -> Vec<NoiseTestOut
                         _pad: 0.0,
                     }
                 }
-                MODE_RIDGED_FBM_DERIVATIVE_EXACT => {
-                    let (value, grad) = ridged_fbm_2d_seeded_derivative_exact(
-                        pos,
-                        input.frequency,
-                        input.octaves,
-                        input.lacunarity,
-                        input.persistence,
-                        input.seed,
-                    );
-                    NoiseTestOutput {
-                        value,
-                        gradient_x: grad.x,
-                        gradient_y: grad.y,
-                        _pad: 0.0,
-                    }
-                }
                 _ => NoiseTestOutput::default(),
             }
         })
@@ -219,8 +197,7 @@ fn compare_results(
 ) -> NoiseParityResult {
     let has_gradient = mode == MODE_SIMPLEX_DERIVATIVE
         || mode == MODE_FBM_DERIVATIVE
-        || mode == MODE_RIDGED_FBM_DERIVATIVE
-        || mode == MODE_RIDGED_FBM_DERIVATIVE_EXACT;
+        || mode == MODE_RIDGED_FBM_DERIVATIVE;
     let (value_tolerance, gradient_tolerance) =
         if mode == MODE_SIMPLEX || mode == MODE_SIMPLEX_DERIVATIVE {
             (SIMPLEX_VALUE_TOLERANCE, SIMPLEX_GRADIENT_TOLERANCE)

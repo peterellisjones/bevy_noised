@@ -239,69 +239,6 @@ pub fn ridged_fbm_2d_seeded_derivative(
     gain: f32,
     seed: f32,
 ) -> (f32, Vec2) {
-    ridged_fbm_2d_seeded_derivative_fast(pos, frequency, octaves, lacunarity, gain, seed)
-}
-
-#[must_use]
-pub fn ridged_fbm_2d_seeded_derivative_fast(
-    pos: Vec2,
-    frequency: f32,
-    octaves: i32,
-    lacunarity: f32,
-    gain: f32,
-    seed: f32,
-) -> (f32, Vec2) {
-    const ZERO_EPSILON: f32 = 1e-4;
-
-    let mut sum = 0.0;
-    let mut gradient = Vec2::ZERO;
-    let mut weight = 1.0;
-    let mut amplitude = 1.0;
-    let mut freq = frequency;
-
-    for _ in 0..octaves {
-        let (noise_val, noise_grad) = simplex_noise_2d_seeded_derivative(pos * freq, seed);
-        let scaled_grad = noise_grad * freq;
-
-        let abs_noise = noise_val.abs();
-        let abs_grad = if noise_val > ZERO_EPSILON {
-            scaled_grad
-        } else if noise_val < -ZERO_EPSILON {
-            -scaled_grad
-        } else {
-            Vec2::ZERO
-        };
-
-        let inverted = 1.0 - abs_noise;
-        let inverted_grad = -abs_grad;
-
-        let mut signal = inverted * inverted * weight;
-        let mut signal_grad = 2.0 * inverted * inverted_grad * weight;
-
-        let new_weight = (signal / amplitude).clamp(0.0, 1.0);
-
-        signal *= amplitude;
-        signal_grad *= amplitude;
-        sum += signal;
-        gradient += signal_grad;
-
-        weight = new_weight;
-        amplitude *= gain;
-        freq *= lacunarity;
-    }
-
-    (sum, gradient)
-}
-
-#[must_use]
-pub fn ridged_fbm_2d_seeded_derivative_exact(
-    pos: Vec2,
-    frequency: f32,
-    octaves: i32,
-    lacunarity: f32,
-    gain: f32,
-    seed: f32,
-) -> (f32, Vec2) {
     const ZERO_EPSILON: f32 = 1e-4;
 
     let mut sum = 0.0;

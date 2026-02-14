@@ -3,8 +3,7 @@
 use bevy_math::Vec2;
 use bevy_noised::{
     fbm_simplex_2d_seeded, fbm_simplex_2d_seeded_derivative, ridged_fbm_2d_seeded,
-    ridged_fbm_2d_seeded_derivative_exact, ridged_fbm_2d_seeded_derivative_fast,
-    simplex_noise_2d_seeded, simplex_noise_2d_seeded_derivative,
+    ridged_fbm_2d_seeded_derivative, simplex_noise_2d_seeded, simplex_noise_2d_seeded_derivative,
 };
 
 const SAMPLE_COUNT: usize = 64;
@@ -53,7 +52,7 @@ fn simplex_derivative_matches_finite_difference() {
     }
 
     assert!(
-        max_err < 5e-3,
+        max_err < 4e-3,
         "simplex derivative too far from finite difference (max err: {max_err:.3e})"
     );
 }
@@ -81,13 +80,13 @@ fn fbm_derivative_matches_finite_difference() {
     }
 
     assert!(
-        max_err < 4e-4,
+        max_err < 2e-4,
         "fbm derivative too far from finite difference (max err: {max_err:.3e})"
     );
 }
 
 #[test]
-fn ridged_fbm_exact_derivative_matches_finite_difference() {
+fn ridged_fbm_derivative_matches_finite_difference() {
     let frequency = 0.001;
     let octaves = 6;
     let lacunarity = 2.0;
@@ -98,7 +97,7 @@ fn ridged_fbm_exact_derivative_matches_finite_difference() {
 
     for p in sample_positions() {
         let (_, grad) =
-            ridged_fbm_2d_seeded_derivative_exact(p, frequency, octaves, lacunarity, gain, seed);
+            ridged_fbm_2d_seeded_derivative(p, frequency, octaves, lacunarity, gain, seed);
         let numeric = central_difference_2d(
             |x| ridged_fbm_2d_seeded(x, frequency, octaves, lacunarity, gain, seed),
             p,
@@ -109,40 +108,7 @@ fn ridged_fbm_exact_derivative_matches_finite_difference() {
     }
 
     assert!(
-        max_err < 2e-3,
-        "ridged exact derivative too far from finite difference (max err: {max_err:.3e})"
-    );
-}
-
-#[test]
-fn ridged_fbm_fast_derivative_is_less_accurate_than_exact() {
-    let frequency = 0.001;
-    let octaves = 6;
-    let lacunarity = 2.0;
-    let gain = 0.5;
-    let seed = 42.0;
-    let h = 1e-2;
-
-    let mut max_err_fast: f32 = 0.0;
-    let mut max_err_exact: f32 = 0.0;
-
-    for p in sample_positions() {
-        let (_, fast_grad) =
-            ridged_fbm_2d_seeded_derivative_fast(p, frequency, octaves, lacunarity, gain, seed);
-        let (_, exact_grad) =
-            ridged_fbm_2d_seeded_derivative_exact(p, frequency, octaves, lacunarity, gain, seed);
-        let numeric = central_difference_2d(
-            |x| ridged_fbm_2d_seeded(x, frequency, octaves, lacunarity, gain, seed),
-            p,
-            h,
-        );
-
-        max_err_fast = max_err_fast.max((fast_grad - numeric).abs().max_element());
-        max_err_exact = max_err_exact.max((exact_grad - numeric).abs().max_element());
-    }
-
-    assert!(
-        max_err_fast > max_err_exact,
-        "expected fast derivative to be less accurate (fast: {max_err_fast:.3e}, exact: {max_err_exact:.3e})"
+        max_err < 1e-3,
+        "ridged derivative too far from finite difference (max err: {max_err:.3e})"
     );
 }

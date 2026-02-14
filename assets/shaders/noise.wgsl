@@ -65,61 +65,7 @@ fn ridged_fbm_2d_seeded(pos: vec2<f32>, frequency: f32, octaves: i32, lacunarity
     return sum;
 }
 
-fn ridged_fbm_2d_seeded_with_derivative_fast(
-    pos: vec2<f32>,
-    frequency: f32,
-    octaves: i32,
-    lacunarity: f32,
-    gain: f32,
-    seed: f32
-) -> vec3<f32> {
-    var sum = 0.0;
-    var gradient = vec2<f32>(0.0, 0.0);
-    var weight = 1.0;
-    var amplitude = 1.0;
-    var freq = frequency;
-
-    for (var i = 0; i < octaves; i += 1) {
-        let noise_and_grad = simplex_noise_2d_seeded_with_derivative(pos * freq, seed);
-        let noise_val = noise_and_grad.x;
-        let noise_grad = noise_and_grad.yz;
-
-        let scaled_grad = noise_grad * freq;
-
-        let abs_noise = abs(noise_val);
-        let ZERO_EPSILON = 1e-4;
-        var abs_grad: vec2<f32>;
-        if (noise_val > ZERO_EPSILON) {
-            abs_grad = scaled_grad;
-        } else if (noise_val < -ZERO_EPSILON) {
-            abs_grad = -scaled_grad;
-        } else {
-            abs_grad = vec2<f32>(0.0, 0.0);
-        }
-
-        let inverted = 1.0 - abs_noise;
-        let inverted_grad = -abs_grad;
-
-        var signal = inverted * inverted * weight;
-        var signal_grad = 2.0 * inverted * inverted_grad * weight;
-
-        let new_weight = clamp(signal / amplitude, 0.0, 1.0);
-
-        signal *= amplitude;
-        signal_grad *= amplitude;
-
-        sum += signal;
-        gradient += signal_grad;
-
-        weight = new_weight;
-        amplitude *= gain;
-        freq *= lacunarity;
-    }
-
-    return vec3(sum, gradient.x, gradient.y);
-}
-
-fn ridged_fbm_2d_seeded_with_derivative_exact(
+fn ridged_fbm_2d_seeded_with_derivative(
     pos: vec2<f32>,
     frequency: f32,
     octaves: i32,
@@ -177,17 +123,6 @@ fn ridged_fbm_2d_seeded_with_derivative_exact(
     }
 
     return vec3(sum, gradient.x, gradient.y);
-}
-
-fn ridged_fbm_2d_seeded_with_derivative(
-    pos: vec2<f32>,
-    frequency: f32,
-    octaves: i32,
-    lacunarity: f32,
-    gain: f32,
-    seed: f32
-) -> vec3<f32> {
-    return ridged_fbm_2d_seeded_with_derivative_fast(pos, frequency, octaves, lacunarity, gain, seed);
 }
 
 fn simplex_noise_2d_seeded(v: vec2<f32>, seed: f32) -> f32 {

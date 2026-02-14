@@ -6,7 +6,6 @@ const MODE_FBM: u32 = 2u;
 const MODE_FBM_DERIVATIVE: u32 = 3u;
 const MODE_RIDGED_FBM: u32 = 4u;
 const MODE_RIDGED_FBM_DERIVATIVE: u32 = 5u;
-const MODE_RIDGED_FBM_DERIVATIVE_EXACT: u32 = 6u;
 
 struct NoiseTestInput {
     x: f32,
@@ -94,19 +93,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         }
         case MODE_RIDGED_FBM_DERIVATIVE: {
             let n = noise::ridged_fbm_2d_seeded_with_derivative(
-                pos,
-                input.frequency,
-                input.octaves,
-                input.lacunarity,
-                input.persistence,
-                input.seed
-            );
-            result.value = n.x;
-            result.gradient_x = n.y;
-            result.gradient_y = n.z;
-        }
-        case MODE_RIDGED_FBM_DERIVATIVE_EXACT: {
-            let n = noise::ridged_fbm_2d_seeded_with_derivative_exact(
                 pos,
                 input.frequency,
                 input.octaves,
