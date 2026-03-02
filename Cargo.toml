@@ -1,6 +1,6 @@
 [package]
 name = "bevy_noised"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 description = "2D seeded noise primitives for Bevy with matching CPU and WGSL implementations"
@@ -12,13 +12,13 @@ keywords = ["bevy", "noise", "terrain", "procedural", "wgsl"]
 categories = ["game-development", "graphics", "algorithms"]
 
 [dependencies]
-bevy_math = "^0.18"
+bevy_math = "^0.18.0"
 
 [dev-dependencies]
-bevy = { version = "^0.18", default-features = false, features = [
+bevy = { version = "^0.18.0", default-features = false, features = [
     "bevy_asset",
     "bevy_render",
     "bevy_window",
     "bevy_winit",
 ] }
-bevy_gpu_test = "^0.2"
+bevy_gpu_test = "^0.2.1"

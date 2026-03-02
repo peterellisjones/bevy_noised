@@ -511,9 +511,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_gpu_test"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6870ec16cee237bc2ed3062ed04c0177bb7f311f8084b1b6facd4be5358981d"
+checksum = "0df23b0ecadadb8f94f1bba9193e3ae8b9d35b53f153724e8f0b7529fe400034"
 dependencies = [
  "bevy",
 ]
@@ -687,7 +687,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_noised"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bevy",
  "bevy_gpu_test",
