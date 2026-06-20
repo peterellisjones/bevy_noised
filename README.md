@@ -114,4 +114,9 @@ Finite-difference derivative tolerances (`tests/finite_difference_derivative_tes
 
 ## Bevy compatibility
 
+- crate `0.2.x` -> Bevy `0.19`
 - crate `0.1.x` -> Bevy `0.18`
+
+## AI assistance
+
+This crate was developed with the help of AI coding tools.
