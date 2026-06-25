@@ -1,6 +1,6 @@
 [package]
 name = "bevy_noised"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 description = "2D seeded noise primitives for Bevy with matching CPU and WGSL implementations"

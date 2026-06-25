@@ -123,6 +123,47 @@ pub fn fbm_simplex_2d_seeded_derivative(
     (sum, gradient)
 }
 
+/// Guaranteed upper bound on `|simplex_noise_2d_seeded(v)|` over all `v` and
+/// all seeds.
+///
+/// A dense multi-seed sweep measures the maximum at ≈ `0.9995`; this constant is
+/// a slightly larger, conservative bound that also covers the inter-grid excess
+/// between sample points. Soundness (`measured <= const`) is asserted by
+/// `tests/primitive_bounds.rs`.
+///
+/// Useful for bounding how much a single octave of [`fbm_simplex_2d_seeded`] can
+/// vary over a region: its peak-to-peak is at most `2 * SIMPLEX_2D_MAX_ABS_VALUE`
+/// per octave (before amplitude scaling).
+pub const SIMPLEX_2D_MAX_ABS_VALUE: f32 = 1.02;
+
+/// Guaranteed upper bound on `‖∇ simplex_noise_2d_seeded(v)‖` (the Euclidean
+/// norm of the gradient with respect to the input coordinates) over all `v` and
+/// all seeds.
+///
+/// A dense multi-seed sweep measures the maximum at ≈ `7.20` (the analytic
+/// gradient and a finite-difference cross-check agree to five significant
+/// figures); this constant is a slightly larger, conservative bound. Soundness
+/// (`measured <= const`) is asserted by `tests/primitive_bounds.rs`.
+///
+/// Useful as a Lipschitz constant: over a region where the input coordinates
+/// move by at most `d`, a single octave's value changes by at most
+/// `SIMPLEX_2D_MAX_GRADIENT * frequency * d`.
+pub const SIMPLEX_2D_MAX_GRADIENT: f32 = 7.4;
+
+/// Guaranteed upper bound on the Frobenius norm of the Hessian (matrix of second
+/// partial derivatives) of `simplex_noise_2d_seeded(v)` over all `v` and all
+/// seeds.
+///
+/// A dense multi-seed sweep (finite-differencing the analytic gradient) measures
+/// the maximum at ≈ `57`; this constant is a slightly larger, conservative bound.
+/// Soundness (`measured <= const`) is asserted by `tests/primitive_bounds.rs`.
+///
+/// Useful for a second-order (Taylor + Lagrange-remainder) bound on how far a
+/// value can move over a region: `|f(p) - f(c)| <= |∇f(c)|·d + ½·H·d²`, which is
+/// much tighter than the first-order Lipschitz bound when the local gradient is
+/// well below its global maximum (the common case for low-frequency octaves).
+pub const SIMPLEX_2D_MAX_HESSIAN: f32 = 75.0;
+
 /// Seeded 2D simplex noise value.
 ///
 /// This is the base primitive used by the fBm and ridged fBm helpers.

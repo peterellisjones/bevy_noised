@@ -75,6 +75,11 @@ In WGSL derivative variants, return shape is:
 - `fbm_simplex_2d_seeded`: layered simplex for terrain-like fields
 - `ridged_fbm_2d_seeded`: mountain/ridge-focused fractal noise
 - `*_derivative` variants: return value + analytical gradient
+- `SIMPLEX_2D_MAX_ABS_VALUE` / `SIMPLEX_2D_MAX_GRADIENT` / `SIMPLEX_2D_MAX_HESSIAN`:
+  guaranteed upper bounds on the simplex primitive's magnitude, gradient norm, and
+  Hessian (Frobenius) norm, for building *sound* min/max interval estimates over a
+  region (e.g. terrain quadtree pruning) — including tight second-order
+  (Taylor + remainder) bounds. All validated by `tests/primitive_bounds.rs`.
 
 Current scope is intentionally focused: seeded 2D primitives with derivative support.
 
