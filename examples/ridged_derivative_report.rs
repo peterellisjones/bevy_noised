@@ -2,8 +2,8 @@
 
 use std::time::Instant;
 
-use glam::Vec2;
 use bevy_noised::{ridged_fbm_2d_seeded, ridged_fbm_2d_seeded_derivative};
+use glam::Vec2;
 
 const PERF_POSITIONS: usize = 4096;
 const PERF_OUTER_ITERS: usize = 300;

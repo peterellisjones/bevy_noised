@@ -54,7 +54,7 @@
 //! Attribution: simplex implementation adapted from MIT-licensed work by
 //! Ian McEwan, Stefan Gustavson, Munrocket, and Johan Helsing.
 
-use glam::{vec2, vec3, vec4, Vec2, Vec3, Vec4};
+use glam::{Vec2, Vec3, Vec4, vec2, vec3, vec4};
 
 pub const WGSL_NOISE_SOURCE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
