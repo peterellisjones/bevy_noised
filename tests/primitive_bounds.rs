@@ -13,11 +13,11 @@
 
 #![allow(clippy::cast_precision_loss)]
 
-use bevy_math::Vec2;
 use bevy_noised::{
-    simplex_noise_2d_seeded_derivative, SIMPLEX_2D_MAX_ABS_VALUE, SIMPLEX_2D_MAX_GRADIENT,
-    SIMPLEX_2D_MAX_HESSIAN,
+    SIMPLEX_2D_MAX_ABS_VALUE, SIMPLEX_2D_MAX_GRADIENT, SIMPLEX_2D_MAX_HESSIAN,
+    simplex_noise_2d_seeded_derivative,
 };
+use glam::Vec2;
 
 /// Grid side per seed. This is a *drift guard*: it asserts the published
 /// constants still bound a dense sample. The constants themselves were chosen

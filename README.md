@@ -29,7 +29,7 @@ You can also use it when gameplay systems and shaders should sample the same fie
 ## Quick start (CPU)
 
 ```rust
-use bevy_math::{Vec2, Vec3};
+use glam::{Vec2, Vec3};
 use bevy_noised::fbm_simplex_2d_seeded_derivative;
 
 let world_pos = Vec2::new(128.0, 256.0);

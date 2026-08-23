@@ -35,7 +35,7 @@
 //! ## Example (CPU)
 //!
 //! ```
-//! use bevy_math::{Vec2, Vec3};
+//! use glam::{Vec2, Vec3};
 //! use bevy_noised::fbm_simplex_2d_seeded_derivative;
 //!
 //! let world_pos = Vec2::new(128.0, 256.0);
@@ -54,7 +54,7 @@
 //! Attribution: simplex implementation adapted from MIT-licensed work by
 //! Ian McEwan, Stefan Gustavson, Munrocket, and Johan Helsing.
 
-use bevy_math::{vec2, vec3, vec4, Vec2, Vec3, Vec4};
+use glam::{Vec2, Vec3, Vec4, vec2, vec3, vec4};
 
 pub const WGSL_NOISE_SOURCE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
