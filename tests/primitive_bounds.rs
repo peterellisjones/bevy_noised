@@ -13,7 +13,7 @@
 
 #![allow(clippy::cast_precision_loss)]
 
-use bevy_math::Vec2;
+use glam::Vec2;
 use bevy_noised::{
     simplex_noise_2d_seeded_derivative, SIMPLEX_2D_MAX_ABS_VALUE, SIMPLEX_2D_MAX_GRADIENT,
     SIMPLEX_2D_MAX_HESSIAN,

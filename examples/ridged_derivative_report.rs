@@ -2,7 +2,7 @@
 
 use std::time::Instant;
 
-use bevy_math::Vec2;
+use glam::Vec2;
 use bevy_noised::{ridged_fbm_2d_seeded, ridged_fbm_2d_seeded_derivative};
 
 const PERF_POSITIONS: usize = 4096;

@@ -829,7 +829,7 @@ version = "0.2.1"
 dependencies = [
  "bevy",
  "bevy_gpu_test",
- "bevy_math",
+ "glam",
 ]
 
 [[package]]

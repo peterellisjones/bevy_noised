@@ -1,6 +1,6 @@
 #![allow(clippy::cast_precision_loss)]
 
-use bevy_math::Vec2;
+use glam::Vec2;
 use bevy_noised::{
     fbm_simplex_2d_seeded, fbm_simplex_2d_seeded_derivative, ridged_fbm_2d_seeded,
     ridged_fbm_2d_seeded_derivative, simplex_noise_2d_seeded, simplex_noise_2d_seeded_derivative,
