@@ -50,6 +50,9 @@
 //!
 //! Use [`WGSL_NOISE_SOURCE`] to embed this crate's shader functions into your
 //! Bevy shader source. WGSL derivative variants return `vec3(value, dfdx, dfdy)`.
+//! The source is plain WGSL and so also a valid WESL module: Bevy 0.20 resolves
+//! shader `import`s only between WESL shaders, so register it with
+//! `Shader::from_wesl` (or ship it as a `.wesl` asset) to `import` it.
 //!
 //! Attribution: simplex implementation adapted from MIT-licensed work by
 //! Ian McEwan, Stefan Gustavson, Munrocket, and Johan Helsing.
@@ -58,7 +61,7 @@ use glam::{Vec2, Vec3, Vec4, vec2, vec3, vec4};
 
 pub const WGSL_NOISE_SOURCE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/assets/shaders/noise.wgsl"
+    "/assets/shaders/noise.wesl"
 ));
 
 /// Fractal Brownian motion (fBm) built from seeded 2D simplex noise.

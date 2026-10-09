@@ -183,7 +183,7 @@ fn compute_cpu_results(mode: u32, inputs: &[NoiseTestInput]) -> Vec<NoiseTestOut
 }
 
 fn run_mode(mode: u32, inputs: Vec<NoiseTestInput>) -> Vec<NoiseTestOutput> {
-    ComputeTest::new("shaders/parity_test_noise.wgsl", inputs)
+    ComputeTest::new("shaders/parity_test_noise.wesl", inputs)
         .with_uniform(mode)
         .with_workgroup_size(64)
         .run()

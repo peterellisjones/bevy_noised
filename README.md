@@ -63,6 +63,10 @@ let shader_src = format!(
 );
 ```
 
+The source is plain WGSL and so also a valid WESL module. Bevy 0.20 resolves shader
+`import`s only between WESL shaders, so to `import` it instead of embedding it,
+register it with `Shader::from_wesl` (or ship it as a `.wesl` asset).
+
 In WGSL derivative variants, return shape is:
 
 - `n.x`: noise value
@@ -119,6 +123,7 @@ Finite-difference derivative tolerances (`tests/finite_difference_derivative_tes
 
 ## Bevy compatibility
 
+- crate `0.3.x` -> Bevy `0.20`
 - crate `0.2.x` -> Bevy `0.19`
 - crate `0.1.x` -> Bevy `0.18`
 
