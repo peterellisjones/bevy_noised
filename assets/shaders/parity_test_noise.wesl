@@ -1,4 +1,4 @@
-#import "shaders/noise.wgsl" as noise
+import package::shaders::noise;
 
 const MODE_SIMPLEX: u32 = 0u;
 const MODE_SIMPLEX_DERIVATIVE: u32 = 1u;
