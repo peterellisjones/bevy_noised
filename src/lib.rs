@@ -79,12 +79,23 @@ pub fn fbm_simplex_2d_seeded(
     gain: f32,
     seed: f32,
 ) -> f32 {
+    fbm::<F64Remainder>(pos, frequency, octaves, lacunarity, gain, seed)
+}
+
+fn fbm<M: Mod289>(
+    pos: Vec2,
+    frequency: f32,
+    octaves: i32,
+    lacunarity: f32,
+    gain: f32,
+    seed: f32,
+) -> f32 {
     let mut sum = 0.0;
     let mut amplitude = 1.0;
     let mut freq = frequency;
 
     for _ in 0..octaves {
-        sum += simplex_noise_2d_seeded(pos * freq, seed) * amplitude;
+        sum += simplex::<M>(pos * freq, seed) * amplitude;
         amplitude *= gain;
         freq *= lacunarity;
     }
@@ -110,13 +121,24 @@ pub fn fbm_simplex_2d_seeded_derivative(
     gain: f32,
     seed: f32,
 ) -> (f32, Vec2) {
+    fbm_derivative::<F64Remainder>(pos, frequency, octaves, lacunarity, gain, seed)
+}
+
+fn fbm_derivative<M: Mod289>(
+    pos: Vec2,
+    frequency: f32,
+    octaves: i32,
+    lacunarity: f32,
+    gain: f32,
+    seed: f32,
+) -> (f32, Vec2) {
     let mut sum = 0.0;
     let mut gradient = Vec2::ZERO;
     let mut amplitude = 1.0;
     let mut freq = frequency;
 
     for _ in 0..octaves {
-        let (noise, grad) = simplex_noise_2d_seeded_derivative(pos * freq, seed);
+        let (noise, grad) = simplex_derivative::<M>(pos * freq, seed);
         sum += noise * amplitude;
         gradient += grad * amplitude * freq;
         amplitude *= gain;
@@ -173,8 +195,12 @@ pub const SIMPLEX_2D_MAX_HESSIAN: f32 = 75.0;
 ///
 /// WGSL equivalent: `simplex_noise_2d_seeded`.
 #[must_use]
-#[allow(clippy::many_single_char_names)]
 pub fn simplex_noise_2d_seeded(v: Vec2, seed: f32) -> f32 {
+    simplex::<F64Remainder>(v, seed)
+}
+
+#[allow(clippy::many_single_char_names)]
+fn simplex<M: Mod289>(v: Vec2, seed: f32) -> f32 {
     const C: Vec4 = vec4(0.211_324_87, 0.366_025_42, -0.577_350_26, 0.024_390_243);
 
     let mut i: Vec2 = (v + Vec2::dot(v, vec2(C.y, C.y))).floor();
@@ -188,10 +214,11 @@ pub fn simplex_noise_2d_seeded(v: Vec2, seed: f32) -> f32 {
     let x12: Vec4 =
         vec4(x0.x, x0.y, x0.x, x0.y) + vec4(C.x, C.x, C.z, C.z) - vec4(i1.x, i1.y, 0.0, 0.0);
 
-    i %= Vec2::splat(289.0);
+    i = M::vec2(i);
 
-    let mut p = permute_3(permute_3(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
-    p = permute_3(p + Vec3::splat(seed));
+    let mut p =
+        permute_3::<M>(permute_3::<M>(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+    p = permute_3::<M>(p + Vec3::splat(seed));
 
     let mut m = Vec3::max(
         0.5 - vec3(
@@ -219,8 +246,56 @@ pub fn simplex_noise_2d_seeded(v: Vec2, seed: f32) -> f32 {
     130.0 * Vec3::dot(m, g)
 }
 
-fn permute_3(x: Vec3) -> Vec3 {
-    (((x * 34.0) + 1.0) * x) % Vec3::splat(289.0)
+fn permute_3<M: Mod289>(x: Vec3) -> Vec3 {
+    M::vec3(((x * 34.0) + 1.0) * x)
+}
+
+/// Per-lane `x % 289.0`, the reduction the simplex hash applies to its lattice
+/// coordinates and permutation products.
+///
+/// The public functions use [`F64Remainder`]. The tests also run every function
+/// through `%` and require bit-identical output.
+trait Mod289 {
+    fn vec2(v: Vec2) -> Vec2;
+    fn vec3(v: Vec3) -> Vec3;
+}
+
+/// [`mod_289`] on each lane.
+struct F64Remainder;
+
+impl Mod289 for F64Remainder {
+    fn vec2(v: Vec2) -> Vec2 {
+        vec2(mod_289(v.x), mod_289(v.y))
+    }
+
+    fn vec3(v: Vec3) -> Vec3 {
+        vec3(mod_289(v.x), mod_289(v.y), mod_289(v.z))
+    }
+}
+
+/// The period of the simplex permutation hash.
+const PERMUTE_PERIOD: f64 = 289.0;
+
+/// Magnitude below which [`mod_289`]'s f64 remainder is exact: 2⁵³.
+const EXACT_REMAINDER_BELOW: f64 = 9_007_199_254_740_992.0;
+
+/// `x % 289.0`, bit for bit, without libm's `fmodf`: each simplex sample takes
+/// 11 of these, and `fmodf` was most of the CPU noise's cost.
+///
+/// A float remainder is exact, and so is this one for `|x| < 2⁵³`. In f64,
+/// `x / 289` lies at least `min(1, ulp(x)) / 289` from the next integer, far
+/// more than its rounding error, so it truncates to the true quotient `k`, and
+/// `x − 289k` is exact. Copying `x`'s sign keeps a zero remainder signed as
+/// `fmodf`'s is. Larger or non-finite `x` falls back to `%`.
+fn mod_289(x: f32) -> f32 {
+    let wide = f64::from(x);
+    if !wide.is_finite() || wide.abs() >= EXACT_REMAINDER_BELOW {
+        return x % 289.0;
+    }
+    let remainder = wide - (wide / PERMUTE_PERIOD).trunc() * PERMUTE_PERIOD;
+    // A remainder of an f32 is an f32, so this narrowing is exact.
+    let narrowed = remainder as f32;
+    narrowed.copysign(x)
 }
 
 /// Seeded 2D simplex noise value plus analytical gradient.
@@ -232,8 +307,12 @@ fn permute_3(x: Vec3) -> Vec3 {
 ///
 /// WGSL equivalent: `simplex_noise_2d_seeded_with_derivative` (`vec3(value, dx, dy)`).
 #[must_use]
-#[allow(clippy::many_single_char_names, clippy::similar_names)]
 pub fn simplex_noise_2d_seeded_derivative(v: Vec2, seed: f32) -> (f32, Vec2) {
+    simplex_derivative::<F64Remainder>(v, seed)
+}
+
+#[allow(clippy::many_single_char_names, clippy::similar_names)]
+fn simplex_derivative<M: Mod289>(v: Vec2, seed: f32) -> (f32, Vec2) {
     const C: Vec4 = vec4(0.211_324_87, 0.366_025_42, -0.577_350_26, 0.024_390_243);
 
     let mut i: Vec2 = (v + Vec2::dot(v, vec2(C.y, C.y))).floor();
@@ -247,10 +326,11 @@ pub fn simplex_noise_2d_seeded_derivative(v: Vec2, seed: f32) -> (f32, Vec2) {
     let x12: Vec4 =
         vec4(x0.x, x0.y, x0.x, x0.y) + vec4(C.x, C.x, C.z, C.z) - vec4(i1.x, i1.y, 0.0, 0.0);
 
-    i %= Vec2::splat(289.0);
+    i = M::vec2(i);
 
-    let mut p = permute_3(permute_3(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
-    p = permute_3(p + Vec3::splat(seed));
+    let mut p =
+        permute_3::<M>(permute_3::<M>(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+    p = permute_3::<M>(p + Vec3::splat(seed));
 
     let t0 = 0.5 - Vec2::dot(x0, x0);
     let t1 = 0.5 - Vec2::dot(vec2(x12.x, x12.y), vec2(x12.x, x12.y));
@@ -339,13 +419,24 @@ pub fn ridged_fbm_2d_seeded(
     gain: f32,
     seed: f32,
 ) -> f32 {
+    ridged::<F64Remainder>(pos, frequency, octaves, lacunarity, gain, seed)
+}
+
+fn ridged<M: Mod289>(
+    pos: Vec2,
+    frequency: f32,
+    octaves: i32,
+    lacunarity: f32,
+    gain: f32,
+    seed: f32,
+) -> f32 {
     let mut sum = 0.0;
     let mut weight = 1.0;
     let mut amplitude = 1.0;
     let mut freq = frequency;
 
     for _ in 0..octaves {
-        let mut signal = simplex_noise_2d_seeded(pos * freq, seed).abs();
+        let mut signal = simplex::<M>(pos * freq, seed).abs();
         signal = 1.0 - signal;
         signal = signal * signal * weight;
         weight = (signal / amplitude).clamp(0.0, 1.0);
@@ -376,6 +467,17 @@ pub fn ridged_fbm_2d_seeded_derivative(
     gain: f32,
     seed: f32,
 ) -> (f32, Vec2) {
+    ridged_derivative::<F64Remainder>(pos, frequency, octaves, lacunarity, gain, seed)
+}
+
+fn ridged_derivative<M: Mod289>(
+    pos: Vec2,
+    frequency: f32,
+    octaves: i32,
+    lacunarity: f32,
+    gain: f32,
+    seed: f32,
+) -> (f32, Vec2) {
     const ZERO_EPSILON: f32 = 1e-4;
 
     let mut sum = 0.0;
@@ -386,7 +488,7 @@ pub fn ridged_fbm_2d_seeded_derivative(
     let mut freq = frequency;
 
     for _ in 0..octaves {
-        let (noise_val, noise_grad) = simplex_noise_2d_seeded_derivative(pos * freq, seed);
+        let (noise_val, noise_grad) = simplex_derivative::<M>(pos * freq, seed);
         let scaled_grad = noise_grad * freq;
 
         let abs_noise = noise_val.abs();
@@ -424,4 +526,167 @@ pub fn ridged_fbm_2d_seeded_derivative(
     }
 
     (sum, gradient)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The reduction the CPU noise used before 0.3.1: glam's per-lane `%`,
+    /// which is libm's `fmodf`. Kept as the reference [`F64Remainder`] must
+    /// match bit for bit.
+    struct Fmod;
+
+    impl Mod289 for Fmod {
+        fn vec2(v: Vec2) -> Vec2 {
+            v % Vec2::splat(289.0)
+        }
+
+        fn vec3(v: Vec3) -> Vec3 {
+            v % Vec3::splat(289.0)
+        }
+    }
+
+    /// Stride through the f32 bit patterns: every exponent, a spread of
+    /// mantissas.
+    const BIT_STRIDE: usize = 997;
+
+    fn same_bits(a: f32, b: f32) -> bool {
+        a.to_bits() == b.to_bits() || (a.is_nan() && b.is_nan())
+    }
+
+    fn assert_matches_fmod(x: f32) {
+        let (fast, fmod) = (mod_289(x), x % 289.0);
+        assert!(
+            same_bits(fast, fmod),
+            "mod_289({x:e}) = {fast:e}, but {x:e} % 289 = {fmod:e}"
+        );
+    }
+
+    #[test]
+    fn mod_289_matches_fmod_bit_for_bit() {
+        for bits in (0..=0x7f80_0000_u32).step_by(BIT_STRIDE) {
+            assert_matches_fmod(f32::from_bits(bits));
+            assert_matches_fmod(-f32::from_bits(bits));
+        }
+        // The awkward cases: exact multiples (signed zero), just either side of
+        // one, and the fallback past 2⁵³.
+        for k in [1.0_f32, 2.0, 57_000.0, 1e7] {
+            let multiple = k * 289.0;
+            for x in [multiple, multiple.next_down(), multiple.next_up()] {
+                assert_matches_fmod(x);
+                assert_matches_fmod(-x);
+            }
+        }
+        for x in [0.0, 1e17, 1e30, f32::MAX, f32::INFINITY, f32::NAN] {
+            assert_matches_fmod(x);
+            assert_matches_fmod(-x);
+        }
+    }
+
+    /// Every one of the 2³² f32 bit patterns. Slow in a debug build; run with
+    /// `cargo test --release -- --ignored mod_289_matches_fmod_exhaustively`.
+    #[test]
+    #[ignore = "exhaustive: about a minute in release"]
+    fn mod_289_matches_fmod_exhaustively() {
+        let threads = std::thread::available_parallelism().map_or(8, usize::from);
+        let chunk = (1_u64 << 32).div_ceil(threads as u64);
+        std::thread::scope(|scope| {
+            for t in 0..threads as u64 {
+                scope.spawn(move || {
+                    let end = ((t + 1) * chunk).min(1 << 32);
+                    for bits in t * chunk..end {
+                        assert_matches_fmod(f32::from_bits(bits as u32));
+                    }
+                });
+            }
+        });
+    }
+
+    /// A noise output's bit patterns: the value, then any gradient.
+    trait Bits {
+        fn bits(&self) -> Vec<u32>;
+    }
+
+    impl Bits for f32 {
+        fn bits(&self) -> Vec<u32> {
+            vec![self.to_bits()]
+        }
+    }
+
+    impl Bits for (f32, Vec2) {
+        fn bits(&self) -> Vec<u32> {
+            vec![self.0.to_bits(), self.1.x.to_bits(), self.1.y.to_bits()]
+        }
+    }
+
+    /// Calls `func` with [`F64Remainder`] and with [`Fmod`] and asserts the
+    /// outputs are bit-identical.
+    macro_rules! assert_matches_fmod_reference {
+        ($func:ident($($arg:expr),+)) => {{
+            let fast = $func::<F64Remainder>($($arg),+);
+            let fmod = $func::<Fmod>($($arg),+);
+            assert!(
+                fast.bits() == fmod.bits(),
+                "{}{:?}: mod_289 gives {fast:?}, % gives {fmod:?}",
+                stringify!($func),
+                ($($arg),+),
+            );
+        }};
+    }
+
+    /// Noise-space positions from the origin out past 2⁵³, where the lattice
+    /// coordinates take `mod_289`'s `%` fallback, with fractional offsets so
+    /// the points land inside simplex cells.
+    fn positions() -> Vec<Vec2> {
+        let mut out = vec![Vec2::ZERO, Vec2::splat(289.0), Vec2::splat(-289.0)];
+        for scale in [1.0, 37.3, 1e3, 1e5, 4e6, 1.6e7, 1e9, 1e12, 1e16, 1e18] {
+            for i in -4..=4_i8 {
+                for j in -4..=4_i8 {
+                    let x = scale * (f32::from(i) / 4.0) + 0.29 * f32::from(j);
+                    let y = scale * (f32::from(j) / 4.0) - 0.61 * f32::from(i);
+                    out.push(vec2(x, y));
+                }
+            }
+        }
+        out
+    }
+
+    /// Integer and fractional seeds, negative ones, and one large enough that
+    /// the permutation products pass 2⁵³.
+    const SEEDS: [f32; 12] = [
+        0.0, 1.0, 42.0, -3.0, 289.0, 0.5, 0.37, 7.25, -12.9, 1234.567, 1e5, 1e8,
+    ];
+
+    /// `(frequency, lacunarity, gain)` for the fBm and ridged variants.
+    const FRACTAL_PARAMS: [(f32, f32, f32); 2] = [(1.0, 2.0, 0.5), (0.001, 1.93, 0.47)];
+
+    const OCTAVES: i32 = 6;
+
+    #[test]
+    fn noise_matches_fmod_reference_bit_for_bit() {
+        for seed in SEEDS {
+            for p in positions() {
+                assert_matches_fmod_reference!(simplex(p, seed));
+                assert_matches_fmod_reference!(simplex_derivative(p, seed));
+
+                for (frequency, lacunarity, gain) in FRACTAL_PARAMS {
+                    // World-space position whose first octave samples `p`.
+                    let world = p / frequency;
+                    assert_matches_fmod_reference!(fbm(
+                        world, frequency, OCTAVES, lacunarity, gain, seed
+                    ));
+                    assert_matches_fmod_reference!(fbm_derivative(
+                        world, frequency, OCTAVES, lacunarity, gain, seed
+                    ));
+                    assert_matches_fmod_reference!(ridged(
+                        world, frequency, OCTAVES, lacunarity, gain, seed
+                    ));
+                    assert_matches_fmod_reference!(ridged_derivative(
+                        world, frequency, OCTAVES, lacunarity, gain, seed
+                    ));
+                }
+            }
+        }
+    }
 }
